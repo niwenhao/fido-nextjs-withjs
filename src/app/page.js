@@ -48,9 +48,20 @@ export default function Home() {
     registerFIDO(JSON.stringify(publicKeyCredential));
   }
 
+  const getCredential = async () => {
+    const challenge = await getChallenge();
+    const assertion = await navigator.credentials.get({
+      challenge: convertString2UInt8Array(challenge),
+      userVerification: "preferred",
+      rpId: "localhost"
+    })
+  }
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded' onClick={() => initRegister()}>Init Certification</button>
+      <h/>
+      <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded' onClick={() => getCredential()}>Authorization</button>
     </div>
   );
 }

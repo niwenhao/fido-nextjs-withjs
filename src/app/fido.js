@@ -8,6 +8,7 @@ export async function getChallenge() {
 }
 
 export async function registerFIDO(json) {
+    console.log(`json: ${json}`)
     const certification = JSON.parse(json);
 
     const clientDataJSON = base64url.decode(certification.response.clientDataJSON);

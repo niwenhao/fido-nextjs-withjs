@@ -1,5 +1,5 @@
 'use client'
-import { getChallenge, registerFIDO } from "./fido";
+import { credentail, getChallenge, registerFIDO } from "./fido";
 const base64url = require('base64url');
 
 function convertString2UInt8Array(str) {
@@ -12,49 +12,55 @@ function convertString2UInt8Array(str) {
   return bufView;
 }
 
+const fidoId = base64url.toBuffer(base64url.encode('0e10af4a-3fff-4662-94de-f74d48561fda'))
+const fidoName = 'TestFIDO';
+const challenge1 = base64url.toBuffer(base64url.encode('98f08119-ce9c-4e60-bd58-69a95ad01368'))
+const challenge2 = base64url.toBuffer(base64url.encode('7c753aba-4c3c-431f-a158-5be4635c1191'))
+var credentialId = "";
+
+const publicKeyCredentialCreationOptions = {
+  challenge: challenge1,
+  rp: { name: "Example Corp" },
+  user: {
+    id: fidoId,
+    name: "user@example.com",
+    displayName: "User Example",
+  },
+  pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256
+  authenticatorSelection: {
+    userVerification: "preferred"
+  },
+  timeout: 60000,
+  attestation: "direct"
+};
+
+
 export default function Home() {
   const initRegister = async () => {
-    const challenge = await getChallenge();
-    console.log(base64url.encode(challenge));
-    // The publicKey.challenge property in navigator.credentials.create()
-    // expects an ArrayBuffer. Assuming `getChallenge()` returns an
-    // ArrayBufferView (e.g., Uint8Array), we use `.buffer` to get the
-    // underlying ArrayBuffer.
+
     const publicKeyCredential = await navigator.credentials.create({
-      publicKey: {
-        challenge: convertString2UInt8Array(challenge),
-        rp: {
-          name: "Fido",
-          id: "localhost"
-        },
-        user: {
-          name: "test",
-          id: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
-          displayName: "test"
-        },
-        pubKeyCredParams: [
-          {
-            type: "public-key",
-            alg: -7
-          }
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: "platform"
-        },
-        attestation: "direct"
-      }
+      publicKey: publicKeyCredentialCreationOptions
     });
+    credentialId = publicKeyCredential.rawId;
+    console.log(`credentialId:${credentialId}`);
     console.log(JSON.stringify(publicKeyCredential));
     registerFIDO(JSON.stringify(publicKeyCredential));
   }
 
   const getCredential = async () => {
-    const challenge = await getChallenge();
+    console.log(base64url.encode(credentialId));
     const assertion = await navigator.credentials.get({
-      challenge: convertString2UInt8Array(challenge),
+      challenge: challenge2,
+      timeout: 120000,
       userVerification: "preferred",
-      rpId: "localhost"
-    })
+      allowCredentials: [
+        {
+          id: credentialId,
+          type: "public-key"
+        }
+      ]
+    });
+    credentail(JSON.stringify(assertion));
   }
 
   return (

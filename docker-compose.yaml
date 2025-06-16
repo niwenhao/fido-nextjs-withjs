@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: docker.io/nginx:1.25-alpine # Using a specific stable alpine version
+    container_name: nginx_proxy
+    ports:
+      - "8080:80"   # HTTP
+      - "8443:443" # HTTPS
+    volumes:
+      # Mount Nginx configuration:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      # Mount SSL certificates:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app # Ensures 'app' service starts before 'nginx'

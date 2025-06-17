@@ -1,41 +1,69 @@
-# Script to generate SSL certificates using a custom CA
+1. 認証局秘密キー作成
+dev@LAPTOP-B72UN743:~/server-ssl$ openssl genrsa -out dev-ca.key 4096
 
-# Variables
-SSL_DIR="nginx/ssl"
-CA_KEY="${SSL_DIR}/ca.key"
-CA_CERT="${SSL_DIR}/ca.crt"
-SERVER_KEY="${SSL_DIR}/nginx.key"
-SERVER_CSR="${SSL_DIR}/nginx.csr"
-SERVER_CERT="${SSL_DIR}/nginx.crt"
-SERVER_CN="www.nwh-host.org" # Common Name for your server certificate
-CA_CN="My Custom FIDO CA"    # Common Name for your CA
+2. 認証局証明書作成
+dev@LAPTOP-B72UN743:~/server-ssl$ openssl req -x509 -new -nodes -key dev-ca.key -sha256 -days 3650 -out dev-ca.pem
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:JP
+State or Province Name (full name) [Some-State]:TOKYO
+Locality Name (eg, city) []:TOKYO
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Hyron
+Organizational Unit Name (eg, section) []:Dev
+Common Name (e.g. server FQDN or YOUR name) []:Dev-CA
+Email Address []:niwenhao@hyron.co.jp
 
-# Clean up previous SSL files and create directory
-rm -rf nginx/ssl
-mkdir -p nginx/ssl
+3. サーバ証明書秘密キー作成
+openssl genrsa -out server.key 2048
 
-echo "Generating CA private key: ${CA_KEY}"
-openssl genrsa -out "${CA_KEY}" 2048
+4. サーバ証明書証明書署名要求
+openssl req -new -key server.key -out server.csr
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:JP
+State or Province Name (full name) [Some-State]:TOKYO
+Locality Name (eg, city) []:TOKYO
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Hyron
+Organizational Unit Name (eg, section) []:Dev
+Common Name (e.g. server FQDN or YOUR name) []:www.fido-dev.com
+Email Address []:niwenhao@hyron.co.jp
 
-echo "Generating CA certificate: ${CA_CERT}"
-openssl req -x509 -new -nodes -key "${CA_KEY}" -sha256 -days 1024 \
-    -out "${CA_CERT}" \
-    -subj "/CN=${CA_CN}"
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:Hyron
 
-echo "Generating Server private key: ${SERVER_KEY}"
-openssl genrsa -out "${SERVER_KEY}" 2048
+5. サーバ証明書の追加情報作成
+　※server.ext のような設定ファイルは、証明書に重要な**メタ情報（拡張）**を付けるために必要。
+　※特に subjectAltName がないと、証明書は事実上使い物にならない。
+　※openssl x509 ... -extfile server.ext で使用される。
 
-echo "Generating Server CSR: ${SERVER_CSR}"
-openssl req -new -key "${SERVER_KEY}" \
-    -out "${SERVER_CSR}" \
-    -subj "/CN=${SERVER_CN}"
+dev@LAPTOP-B72UN743:~/server-ssl$ cat > server.ext
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+subjectAltName = @alt_names
 
-echo "Signing Server CSR with CA: ${SERVER_CERT}"
-openssl x509 -req -in "${SERVER_CSR}" -CA "${CA_CERT}" -CAkey "${CA_KEY}" -CAcreateserial \
-    -out "${SERVER_CERT}" -days 365 -sha256
+[alt_names]
+DNS.1 = www.fido-dev.com
 
-echo "SSL Certificates generated in ${SSL_DIR}:"
-echo "  CA Certificate: ${CA_CERT}"
-echo "  Server Key: ${SERVER_KEY}"
-echo "  Server Certificate: ${SERVER_CERT}"
-echo "Important: For browsers to trust this setup, you may need to import ${CA_CERT} into your browser/system's trusted CA store."
+6. サーバ証明書の生成
+dev@LAPTOP-B72UN743:~/server-ssl$ openssl x509 -req \
+  -in server.csr \
+  -CA dev-ca.crt -CAkey dev-ca.key -CAcreateserial \
+  -out server.crt -days 365 -sha256 \
+  -extfile server.ext
+Certificate request self-signature ok
+subject=C = JP, ST = TOKYO, L = TOKYO, O = Hyron, OU = Dev, CN = www.fido-dev.com, emailAddress = niwenhao@hyron.co.jp
+
+

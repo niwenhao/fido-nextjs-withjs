@@ -19,8 +19,12 @@ const challenge2 = base64url.toBuffer(base64url.encode('7c753aba-4c3c-431f-a158-
 var credentialId = "";
 
 const publicKeyCredentialCreationOptions = {
+  attestation: "direct",
   challenge: challenge1,
-  rp: { name: "Example Corp" },
+  rp: { 
+    id: 'www.fido-dev.com',
+    name: "FIDO DEV" 
+  },
   user: {
     id: fidoId,
     name: "user@example.com",
@@ -30,11 +34,7 @@ const publicKeyCredentialCreationOptions = {
     { type: "public-key", alg: -7 },
     { type: "public-key", alg: -257 }
   ], // ES256
-  authenticatorSelection: {
-    userVerification: "preferred"
-  },
-  timeout: 60000,
-  attestation: "direct"
+  timeout: 60000
 };
 
 
@@ -45,23 +45,26 @@ export default function Home() {
       publicKey: publicKeyCredentialCreationOptions
     });
     credentialId = publicKeyCredential.rawId;
-    console.log(`credentialId:${credentialId}`);
+    console.log(`credentialId: ${base64url.encode(credentialId)}`);
     console.log(JSON.stringify(publicKeyCredential));
     registerFIDO(JSON.stringify(publicKeyCredential));
   }
 
   const getCredential = async () => {
     console.log(base64url.encode(credentialId));
+    console.log(`credentialId: ${base64url.encode(credentialId)}`)
     const assertion = await navigator.credentials.get({
       challenge: challenge2,
-      timeout: 120000,
-      userVerification: "preferred",
+      timeout: 60000,
+      rpId: 'www.fido-dev.com',
       allowCredentials: [
         {
           id: credentialId,
-          type: "public-key"
+          type: 'public-key',
+          transports: ['internal']
         }
-      ]
+      ],
+      userVerification: "preferred"
     });
     credentail(JSON.stringify(assertion));
   }
@@ -69,7 +72,7 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded' onClick={() => initRegister()}>Init Certification</button>
-      <h/>
+      <br/>
       <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded' onClick={() => getCredential()}>Authorization</button>
     </div>
   );
